@@ -27,6 +27,7 @@
   const draftSaveStatus = document.querySelector("[data-draft-save-status]");
   const resumeDialog = document.querySelector("[data-resume-dialog]");
   const resumeSummary = document.querySelector("[data-resume-summary]");
+  const heroEmailInput = document.querySelector("[data-hero-email]");
   const SUPABASE_CONFIG = window.__SUPABASE_CONFIG__ || {};
   const SUPABASE_URL = SUPABASE_CONFIG.url || "";
   const SUPABASE_PUBLISHABLE_KEY =
@@ -3761,6 +3762,9 @@
     const pageState = state.locked ? "result" : pageIndex === 0 ? "intro" : "wizard";
 
     document.body.dataset.pageState = pageState;
+    if (heroEmailInput) {
+      heroEmailInput.value = answers.email || "";
+    }
     pageTitle.textContent = meta.title;
     pageSubtitle.textContent = meta.subtitle;
     pageCopy.textContent = meta.copy;
@@ -3896,7 +3900,11 @@
       return;
     }
 
-    if (state.currentPage === 1) {
+    if (state.currentPage === 0) {
+      if (heroEmailInput) {
+        state.answers.email = cleanText(heroEmailInput.value, 120);
+      }
+    } else if (state.currentPage === 1) {
       state.answers.name = cleanText(getFieldValue("name"), 80);
       state.answers.email = cleanText(getFieldValue("email"), 120);
       state.answers.roleBackground = cleanText(getFieldValue("roleBackground"), 120);
@@ -4188,6 +4196,12 @@
           event.preventDefault();
           discardSavedDraft();
         }
+      });
+    }
+
+    if (heroEmailInput) {
+      heroEmailInput.addEventListener("input", function () {
+        state.answers.email = cleanText(heroEmailInput.value, 120);
       });
     }
 

@@ -214,12 +214,19 @@ body:not([data-page-state="intro"]) .step-strip {
 .hero-cta {
   width: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   margin-top: 22px;
 }
 
 .hero-cta .primary-btn {
   min-width: min(100%, 240px);
+}
+
+.hero-email-field {
+  width: 100%;
+  max-width: 360px;
 }
 
 .hero-start:hover,
