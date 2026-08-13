@@ -89,9 +89,9 @@
     },
     {
       title: "Weighted Assessment",
-      subtitle: "Rate the five factors that make up your AI fluency score.",
+      subtitle: "Rate the five factors that make up your self-assessed judgment.",
       copy:
-        "Each factor uses a 1-5 scale and a different weight in the final score.",
+        "Each factor uses a 1-5 scale and a different weight within this page. This page is one of four signals in your final AI fluency score, alongside tool usage, skills, and learning investment.",
       step: "Assessment",
     },
     {
@@ -486,6 +486,14 @@
     },
   ];
 
+  const trainingStatusValueOrder = {
+    "no-interest": 0,
+    "interest-but-not-yet-attended": 1,
+    "attend-free-session-only": 2,
+    "attend-paid-session-only": 3,
+    "attend-both-free-and-paid-session": 4,
+  };
+
   const trainingTopicSections = [
     {
       key: "training-topic-a",
@@ -810,6 +818,7 @@
       aiLearnHoursMonthly: "0",
       aiCostWorkMonthly: "0",
       aiCostLearnMonthly: "0",
+      aiTotalInvestmentSinceLaunch: "0",
       goal: "None",
       goalSecondary: "None",
       goalThird: "None",
@@ -1767,8 +1776,7 @@
     return clamp(Math.round(((score - 1) * 6) / 99) + 1, 1, 7);
   }
 
-  function calculateLevel(answers) {
-    const skills = normalizeTools(answers.tools, answers.toolsOther);
+  function computeJudgmentIndex(answers) {
     const toolBreadth = getAssessmentRating(answers, "toolBreadth");
     const promptQuality = getAssessmentRating(answers, "promptQuality");
     const verificationJudgment = getAssessmentRating(answers, "verificationJudgment");
@@ -1791,25 +1799,110 @@
     const weightedScore = factorScores.reduce(function (sum, factor) {
       return sum + factor.score;
     }, 0);
-    const normalizedScore =
-      totalWeight > 0 ? Math.round((weightedScore / totalWeight) * 100) : 0;
-
-    const fluencyScore = clamp(
-      normalizedScore,
-      1,
-      100
-    );
-    const level = scoreToLevel(fluencyScore);
+    const index =
+      totalWeight > 0 ? clamp(Math.round((weightedScore / totalWeight) * 100), 0, 100) : 0;
 
     return {
-      level: level,
-      fluencyScore: fluencyScore,
+      index: index,
       toolBreadth: toolBreadth,
       promptQuality: promptQuality,
       verificationJudgment: verificationJudgment,
       automationBuilding: automationBuilding,
       timeCostCommitment: timeCostCommitment,
       factorScores: factorScores,
+    };
+  }
+
+  function getUsageLevelAverage(entries, valueOrder) {
+    if (!entries.length) {
+      return 0;
+    }
+
+    const total = entries.reduce(function (sum, entry) {
+      const level = Object.prototype.hasOwnProperty.call(valueOrder, entry.value)
+        ? valueOrder[entry.value]
+        : 0;
+      return sum + level;
+    }, 0);
+
+    return total / entries.length;
+  }
+
+  function computeToolIndex(answers) {
+    const average = getUsageLevelAverage(getToolUsageEntries(answers), toolUsageValueOrder);
+    return clamp((average / 4) * 100, 0, 100);
+  }
+
+  function computeSkillIndex(answers) {
+    const average = getUsageLevelAverage(
+      getKnowledgeSkillEntries(answers),
+      knowledgeSkillStatusValueOrder
+    );
+    return clamp((average / 4) * 100, 0, 100);
+  }
+
+  function getTrainingEngagementAverage(answers) {
+    if (!Array.isArray(answers.trainingTopics) || !answers.trainingTopics.length) {
+      return 0;
+    }
+
+    const total = answers.trainingTopics.reduce(function (sum, value) {
+      const level = Object.prototype.hasOwnProperty.call(trainingStatusValueOrder, value)
+        ? trainingStatusValueOrder[value]
+        : 0;
+      return sum + level;
+    }, 0);
+
+    return total / answers.trainingTopics.length;
+  }
+
+  function computeCommitmentScore(answers) {
+    const hours = getMonthlyHourNumber(answers.aiHoursTotalMonthly) || 0;
+    const cost = getMonthlyCostNumber(answers.aiCostTotalMonthly) || 0;
+    const lifetime = parseNumberValue(answers.aiTotalInvestmentSinceLaunch) || 0;
+
+    const hoursScore = clamp((hours / 90) * 100, 0, 100);
+    const costScore = clamp((cost / 600) * 100, 0, 100);
+    const lifetimeScore = clamp((lifetime / 5000) * 100, 0, 100);
+
+    return (hoursScore + costScore + lifetimeScore) / 3;
+  }
+
+  function computeInvestmentIndex(answers) {
+    const trainingEngagement = (getTrainingEngagementAverage(answers) / 4) * 100;
+    const commitment = computeCommitmentScore(answers);
+    return clamp(trainingEngagement * 0.6 + commitment * 0.4, 0, 100);
+  }
+
+  function calculateLevel(answers) {
+    const skills = normalizeTools(answers.tools, answers.toolsOther);
+    const judgment = computeJudgmentIndex(answers);
+    const toolIndex = computeToolIndex(answers);
+    const skillIndex = computeSkillIndex(answers);
+    const investmentIndex = computeInvestmentIndex(answers);
+
+    const composite =
+      toolIndex * 0.25 +
+      skillIndex * 0.25 +
+      investmentIndex * 0.15 +
+      judgment.index * 0.35;
+
+    const fluencyScore = clamp(Math.round(composite), 1, 100);
+    const level = scoreToLevel(fluencyScore);
+
+    return {
+      level: level,
+      fluencyScore: fluencyScore,
+      toolIndex: toolIndex,
+      skillIndex: skillIndex,
+      investmentIndex: investmentIndex,
+      judgmentIndex: judgment.index,
+      toolBreadth: judgment.toolBreadth,
+      promptQuality: judgment.promptQuality,
+      verificationJudgment: judgment.verificationJudgment,
+      automationBuilding: judgment.automationBuilding,
+      timeCostCommitment: judgment.timeCostCommitment,
+      factorScores: judgment.factorScores,
       tools: skills,
       toolCount: skills.length,
     };
@@ -2556,6 +2649,21 @@
               };
             }),
           },
+          {
+            section: "02",
+            key: "lifetime-investment",
+            title: "Lifetime investment",
+            note: "Total spend since exploring AI began.",
+            items: [
+              {
+                index: "01",
+                name: "aiTotalInvestmentSinceLaunch",
+                question: "Total investment since Nov 2022 (MYR)",
+                answer: answersSnapshot.aiTotalInvestmentSinceLaunch,
+                suggested_answer: answersSnapshot.aiTotalInvestmentSinceLaunch,
+              },
+            ],
+          },
         ];
       }
 
@@ -3247,6 +3355,13 @@
         '<div class="field-grid">' +
         breakdownFields +
         "</div>" +
+        '<p class="section-note">Now add up everything you have spent on AI tools, subscriptions, and courses since you started exploring AI, from ChatGPT\'s public launch in November 2022 to today.</p>' +
+        renderNumberField(
+          "aiTotalInvestmentSinceLaunch",
+          "Total investment since Nov 2022 (MYR)",
+          answers.aiTotalInvestmentSinceLaunch,
+          "e.g. 1500"
+        ) +
         '<div class="actions">' +
         '<button type="button" class="secondary-btn" data-action="download-json">Download assessment JSON</button>' +
         "</div>"
@@ -3302,7 +3417,10 @@
             "assessment-" + factor.key,
             "07" + String.fromCharCode(65 + index),
             factor.title,
-            factor.weight + "% of the final AI fluency score.",
+            factor.weight +
+              "% of this page's self-assessed judgment score (" +
+              Number((factor.weight * 0.35).toFixed(1)) +
+              "% of the final AI fluency score).",
             '<p class="section-note">' +
               escapeHtml(factor.prompt) +
               " " +
@@ -3432,6 +3550,41 @@
       roadmap.pacing +
       ", grounded in your available time, budget, and current skills.";
 
+    const compositeIndices = [
+      { label: "Tool breadth & depth", value: roadmap.levelSignal.toolIndex, weight: 25 },
+      { label: "Skill depth", value: roadmap.levelSignal.skillIndex, weight: 25 },
+      { label: "Learning investment", value: roadmap.levelSignal.investmentIndex, weight: 15 },
+      { label: "Self-assessed judgment", value: roadmap.levelSignal.judgmentIndex, weight: 35 },
+    ];
+    const compositeRows = compositeIndices
+      .map(function (item) {
+        const roundedValue = Math.round(item.value);
+
+        return (
+          '<article class="result-factor">' +
+          '<div class="result-factor__head">' +
+          "<h4>" +
+          escapeHtml(item.label) +
+          "</h4>" +
+          '<span class="result-factor__weight">' +
+          item.weight +
+          "% weight</span>" +
+          "</div>" +
+          '<div class="result-factor__bar" role="progressbar" aria-label="' +
+          escapeHtml(item.label) +
+          '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+          roundedValue +
+          '"><span style="--factor-progress: ' +
+          roundedValue +
+          '%"></span></div>' +
+          '<div class="result-factor__rating"><strong>' +
+          roundedValue +
+          "</strong><span>/ 100</span></div>" +
+          "</article>"
+        );
+      })
+      .join("");
+
     const factorRows = roadmap.levelSignal.factorScores
       .map(function (factor) {
         const ratingOption = assessmentScaleOptions.find(function (option) {
@@ -3502,8 +3655,13 @@
       '<header class="result-section-head">' +
       '<span class="result-section-index">01</span>' +
       "<div><p>Assessment signals</p><h3>What is shaping your score</h3>" +
-      "<span>Your five weighted factors, followed by the context used to tailor the roadmap.</span></div>" +
+      "<span>Four weighted indices make up the final score, drawn from pages 04 through 08, followed by the context used to tailor the roadmap.</span></div>" +
       "</header>" +
+      '<p class="section-note">Score composition</p>' +
+      '<div class="result-factor-grid">' +
+      compositeRows +
+      "</div>" +
+      '<p class="section-note">Self-assessed judgment breakdown - page 07, 35% of the score above</p>' +
       '<div class="result-factor-grid">' +
       factorRows +
       "</div>" +
@@ -3954,6 +4112,10 @@
           getFieldValue(field.name)
         );
       });
+      state.answers.aiTotalInvestmentSinceLaunch = cleanText(
+        getFieldValue("aiTotalInvestmentSinceLaunch"),
+        20
+      );
     }
   }
 
