@@ -1165,7 +1165,7 @@
         !isUuid(record.resumeToken) ||
         !Number.isInteger(record.currentPage) ||
         record.currentPage < 1 ||
-        record.currentPage > 7 ||
+        record.currentPage > 8 ||
         !record.answers ||
         typeof record.answers !== "object" ||
         isExpired
@@ -1182,7 +1182,7 @@
   }
 
   function persistDraftLocally() {
-    if (state.locked || state.currentPage < 1 || state.currentPage > 7) {
+    if (state.locked || state.currentPage < 1 || state.currentPage > 8) {
       return null;
     }
 
@@ -4778,7 +4778,7 @@
     }
 
     window.addEventListener("beforeunload", function () {
-      if (!state.locked && state.currentPage > 0 && state.currentPage < 8) {
+      if (!state.locked && state.currentPage > 0 && state.currentPage < 9) {
         syncAnswersFromCurrentPage();
         persistDraftLocally();
       }
