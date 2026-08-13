@@ -630,6 +630,20 @@
 
   const WEEKS_PER_MONTH = 4.345;
 
+  // How many tools or skills a fluent practitioner is expected to have engaged
+  // with. Depth is averaged over the entries actually touched, but never over
+  // fewer than this, so a deep specialist is not penalized for the rest of the
+  // catalog while someone using one or two things still scores thin.
+  const COVERAGE_EXPECTED_SET = 10;
+
+  // Band cut points on the 1-100 fluency score. Calibrated against a simulated
+  // cohort after the coverage indices changed; the previous level-derived split
+  // put 88% of users in one band and made "advanced" unreachable.
+  const BAND_THRESHOLDS = {
+    beginner: 40,
+    intermediate: 65,
+  };
+
   const beginnerModules = [
     {
       title: "Signal setup",
@@ -1446,9 +1460,9 @@
     }
   }
 
-  function getBand(level) {
-    if (level <= 2) return "beginner";
-    if (level <= 5) return "intermediate";
+  function getBand(score) {
+    if (score < BAND_THRESHOLDS.beginner) return "beginner";
+    if (score < BAND_THRESHOLDS.intermediate) return "intermediate";
     return "advanced";
   }
 
@@ -1813,32 +1827,47 @@
     };
   }
 
-  function getUsageLevelAverage(entries, valueOrder) {
-    if (!entries.length) {
+  function getEntryLevels(entries, valueOrder) {
+    return entries.map(function (entry) {
+      return Object.prototype.hasOwnProperty.call(valueOrder, entry.value)
+        ? valueOrder[entry.value]
+        : 0;
+    });
+  }
+
+  // Averaging across the whole catalog scored catalog coverage rather than
+  // fluency: someone who pushed a handful of tools to advanced and ignored the
+  // rest was penalized for every item they deliberately never adopted. Instead,
+  // average depth across the entries actually engaged with, over a floor of
+  // COVERAGE_EXPECTED_SET so that engaging with only one or two still reads as
+  // thin. Untouched catalog entries beyond the floor no longer count against
+  // anyone.
+  function computeCoverageIndex(entries, valueOrder) {
+    const levels = getEntryLevels(entries, valueOrder);
+    if (!levels.length) {
       return 0;
     }
 
-    const total = entries.reduce(function (sum, entry) {
-      const level = Object.prototype.hasOwnProperty.call(valueOrder, entry.value)
-        ? valueOrder[entry.value]
-        : 0;
+    const engaged = levels.filter(function (level) {
+      return level > 0;
+    }).length;
+    const total = levels.reduce(function (sum, level) {
       return sum + level;
     }, 0);
+    const divisor = Math.max(engaged, COVERAGE_EXPECTED_SET);
 
-    return total / entries.length;
+    return clamp((total / divisor / 4) * 100, 0, 100);
   }
 
   function computeToolIndex(answers) {
-    const average = getUsageLevelAverage(getToolUsageEntries(answers), toolUsageValueOrder);
-    return clamp((average / 4) * 100, 0, 100);
+    return computeCoverageIndex(getToolUsageEntries(answers), toolUsageValueOrder);
   }
 
   function computeSkillIndex(answers) {
-    const average = getUsageLevelAverage(
+    return computeCoverageIndex(
       getKnowledgeSkillEntries(answers),
       knowledgeSkillStatusValueOrder
     );
-    return clamp((average / 4) * 100, 0, 100);
   }
 
   function getTrainingEngagementAverage(answers) {
@@ -2076,8 +2105,8 @@
     };
   }
 
-  function getBandLabel(level) {
-    return bandConfig[getBand(level)].label;
+  function getBandLabel(score) {
+    return bandConfig[getBand(score)].label;
   }
 
   function buildToolPlan(answers, band, trackKey, level) {
@@ -2224,7 +2253,7 @@
 
   function computeRoadmap(answers) {
     const levelSignal = calculateLevel(answers);
-    const bandKey = getBand(levelSignal.level);
+    const bandKey = getBand(levelSignal.fluencyScore);
     const band = bandConfig[bandKey];
     const track = getTrack(answers.goal);
     const monthlyHours = getMonthlyHours(answers);
@@ -3981,7 +4010,7 @@
     } else {
       dialLabel.textContent = "Page";
       dialValue.textContent = String(pageIndex + 1) + "/" + TOTAL_PAGES;
-      dialTrack.textContent = getBandLabel(roadmap.levelSignal.level);
+      dialTrack.textContent = getBandLabel(roadmap.levelSignal.fluencyScore);
       dialStatus.textContent = getDialStatus(completion.completed, state.currentPage);
     }
 
