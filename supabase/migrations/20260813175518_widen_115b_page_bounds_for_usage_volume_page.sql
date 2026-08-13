@@ -13,6 +13,10 @@ alter table public."115b_assessment_drafts"
 alter table public."115b_assessment_submissions"
   drop constraint "115b_assessment_submissions_current_page_check";
 
+update public."115b_assessment_submissions"
+  set current_page = 9
+  where current_page <> 9;
+
 alter table public."115b_assessment_submissions"
   alter column current_page set default 9;
 
