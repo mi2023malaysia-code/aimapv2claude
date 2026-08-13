@@ -1,7 +1,7 @@
 (function () {
-  const TOTAL_PAGES = 9;
-  const RESULT_PAGE_INDEX = 8;
-  const TOTAL_COMPLETION_SECTIONS = 13;
+  const TOTAL_PAGES = 10;
+  const RESULT_PAGE_INDEX = 9;
+  const TOTAL_COMPLETION_SECTIONS = 14;
 
   const form = document.getElementById("wizard-form");
   const pageContent = document.getElementById("page-content");
@@ -93,6 +93,13 @@
       copy:
         "Each factor uses a 1-5 scale and a different weight within this page. This page is one of four signals in your final AI fluency score, alongside tool usage, skills, and learning investment.",
       step: "Assessment",
+    },
+    {
+      title: "Tool & Skill Usage Volume",
+      subtitle: "Tell us when you started and how much you have used each area.",
+      copy:
+        "Your start month and this usage volume matrix feed directly into your AI fluency score, alongside tool usage, skills, and self-assessed judgment.",
+      step: "Volume",
     },
     {
       title: "Monthly Time & Cost",
@@ -231,6 +238,189 @@
     "paid-version": 3,
     "advance-features": 4,
   };
+
+  const usageCountDropdownOptions = [
+    { value: "0", label: "0", numericValue: 0 },
+    { value: "1 - 30", label: "1 - 30", numericValue: 1 },
+    { value: "31 - 100", label: "31 - 100", numericValue: 2 },
+    { value: "101 - 500", label: "101 - 500", numericValue: 3 },
+    { value: "More then 500", label: "More then 500", numericValue: 4 },
+  ];
+
+  const usageCountValueOrder = {
+    "": 0,
+    "0": 0,
+    "1 - 30": 1,
+    "31 - 100": 2,
+    "101 - 500": 3,
+    "More then 500": 4,
+  };
+
+  const usageMatrixSections = [
+    {
+      key: "usage-matrix-b",
+      title: "B. Basic prompt",
+      note: "How many times you have used or collected basic prompts.",
+      items: [
+        { name: "usageB1", label: "B1 - Basic prompt (Use)" },
+        { name: "usageB2", label: "B2 - Basic prompt (collect)" },
+      ],
+    },
+    {
+      key: "usage-matrix-c",
+      title: "C. Prompt Structure - Prompt Engineering",
+      note: "How many times you have used or collected structured prompts.",
+      items: [
+        { name: "usageC1", label: "C1 - Prompt Structure - Prompt Engineering (use)" },
+        { name: "usageC2", label: "C2 - Prompt Structure - Prompt Engineering (collect)" },
+      ],
+    },
+    {
+      key: "usage-matrix-d",
+      title: "D. Hyperprompt",
+      note: "How many times you have used or collected hyperprompts.",
+      items: [
+        { name: "usageD1", label: "D1 - Hyperprompt (use)" },
+        { name: "usageD2", label: "D2 - Hyperprompt (collect)" },
+      ],
+    },
+    {
+      key: "usage-matrix-e",
+      title: "E. Custom GPT",
+      note: "How many custom GPTs you have used, created/modified, or collected.",
+      items: [
+        { name: "usageE1", label: "E1 - Custom gpt (used)" },
+        { name: "usageE2", label: "E2 - Custom gpt (created/modified)" },
+        { name: "usageE3", label: "E3 - Custom gpt (collected)" },
+      ],
+    },
+    {
+      key: "usage-matrix-f",
+      title: "F. Skills created",
+      note: "How many skills you have used, created/modified, or collected.",
+      items: [
+        { name: "usageF1", label: "F1 - Skills created (used)" },
+        { name: "usageF2", label: "F2 - Skills created (created/modified)" },
+        { name: "usageF3", label: "F3 - Skills created (collected)" },
+      ],
+    },
+    {
+      key: "usage-matrix-g",
+      title: "G. Agents",
+      note: "How many agents you have used, created/modified, or collected.",
+      items: [
+        { name: "usageG1", label: "G1 - Agents (used)" },
+        { name: "usageG2", label: "G2 - Agents (created/modified)" },
+        { name: "usageG3", label: "G3 - Agents (collect)" },
+      ],
+    },
+    {
+      key: "usage-matrix-h",
+      title: "H. Workflow",
+      note: "How many workflows you have used, created/modified, or collected.",
+      items: [
+        { name: "usageH1", label: "H1 - Workflow (used)" },
+        { name: "usageH2", label: "H2 - Workflow (created/modified)" },
+        { name: "usageH3", label: "H3 - Workflow (collected)" },
+      ],
+    },
+    {
+      key: "usage-matrix-j",
+      title: "J. Error checking",
+      note: "How many times you have checked for errors and how many were detected.",
+      items: [
+        { name: "usageJ1", label: "J1 - Try Error Checking" },
+        { name: "usageJ2", label: "J2 - Detected Error" },
+      ],
+    },
+  ];
+
+  const usageMatrixFields = [];
+  usageMatrixSections.forEach(function (section) {
+    section.items.forEach(function (item) {
+      usageMatrixFields.push({
+        name: item.name,
+        label: item.label,
+        sectionKey: section.key,
+      });
+    });
+  });
+
+  const START_MONTH_EPOCH = { year: 2022, month: 11 };
+  const START_MONTH_LABELS = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+
+  function buildStartMonthOptions() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const options = [{ value: "", label: "Select a month" }];
+
+    let year = START_MONTH_EPOCH.year;
+    let month = START_MONTH_EPOCH.month;
+
+    while (year < currentYear || (year === currentYear && month <= currentMonth)) {
+      const value = year + "-" + String(month).padStart(2, "0");
+      const label = START_MONTH_LABELS[month - 1] + " " + year;
+      options.push({ value: value, label: label });
+
+      month += 1;
+      if (month > 12) {
+        month = 1;
+        year += 1;
+      }
+    }
+
+    return options;
+  }
+
+  const positionRankedOptions = [
+    { value: "None", label: "None" },
+    { value: "junior", label: "Junior" },
+    { value: "senior", label: "Senior" },
+    { value: "c-level", label: "C-level" },
+    { value: "boss", label: "Boss" },
+    { value: "freelancer", label: "Freelancer" },
+    { value: "student", label: "Student" },
+    { value: "retire", label: "Retire" },
+    { value: "other", label: "Other" },
+  ];
+
+  const industryOptions = [
+    { value: "None", label: "None" },
+    { value: "Manufacturing", label: "Manufacturing" },
+    { value: "Automotive", label: "Automotive" },
+    { value: "Electronics & Semiconductor", label: "Electronics & Semiconductor" },
+    { value: "Information Technology (IT)", label: "Information Technology (IT)" },
+    { value: "Artificial Intelligence (AI)", label: "Artificial Intelligence (AI)" },
+    { value: "Telecommunications", label: "Telecommunications" },
+    { value: "Healthcare & Medical", label: "Healthcare & Medical" },
+    { value: "Pharmaceuticals", label: "Pharmaceuticals" },
+    { value: "Biotechnology", label: "Biotechnology" },
+    { value: "Financial Services", label: "Financial Services" },
+    { value: "Real Estate & Construction", label: "Real Estate & Construction" },
+    { value: "Energy & Utilities", label: "Energy & Utilities" },
+    { value: "Renewable Energy", label: "Renewable Energy" },
+    { value: "Agriculture & Agritech", label: "Agriculture & Agritech" },
+    { value: "Food & Beverage", label: "Food & Beverage" },
+    { value: "Retail & E-commerce", label: "Retail & E-commerce" },
+    { value: "Logistics & Supply Chain", label: "Logistics & Supply Chain" },
+    { value: "Transportation", label: "Transportation" },
+    { value: "Education & EdTech", label: "Education & EdTech" },
+    { value: "Hospitality & Tourism", label: "Hospitality & Tourism" },
+    { value: "Media & Entertainment", label: "Media & Entertainment" },
+    { value: "Marketing & Advertising", label: "Marketing & Advertising" },
+    { value: "Human Resources (HR)", label: "Human Resources (HR)" },
+    { value: "Legal Services", label: "Legal Services" },
+    { value: "Government & Public Sector", label: "Government & Public Sector" },
+    { value: "Aerospace & Defense", label: "Aerospace & Defense" },
+    { value: "Environmental Services", label: "Environmental Services" },
+    { value: "Consumer Goods", label: "Consumer Goods" },
+    { value: "Fashion & Apparel", label: "Fashion & Apparel" },
+    { value: "Beauty & Cosmetics", label: "Beauty & Cosmetics" },
+  ];
 
   const knowledgeSkillStatusDefaultOption = {
     value: "no-interest",
@@ -818,6 +1008,9 @@
       name: "",
       email: "",
       roleBackground: "",
+      jobTitle: "",
+      positionRanked: "None",
+      industry: "None",
       wants: ["None", "None", "None"],
       wantsOther: "",
       pain: ["None", "None", "None"],
@@ -833,6 +1026,7 @@
       aiCostWorkMonthly: "0",
       aiCostLearnMonthly: "0",
       aiTotalInvestmentSinceLaunch: "0",
+      aiStartMonth: "",
       goal: "None",
       goalSecondary: "None",
       goalThird: "None",
@@ -850,6 +1044,12 @@
     toolUsageSections.forEach(function (section) {
       section.items.forEach(function (item) {
         answers[item.name] = "not-yet-try";
+      });
+    });
+
+    usageMatrixSections.forEach(function (section) {
+      section.items.forEach(function (item) {
+        answers[item.name] = "0";
       });
     });
 
@@ -1453,7 +1653,7 @@
     nextBtn.hidden = false;
     nextBtn.disabled = state.draftSaveState.status === "saving";
 
-    if (state.currentPage === 7) {
+    if (state.currentPage === 8) {
       nextBtn.textContent = "Generate result";
     } else {
       nextBtn.textContent = "Continue";
@@ -1870,6 +2070,10 @@
     );
   }
 
+  function computeUsageDepthIndex(answers) {
+    return computeCoverageIndex(getUsageMatrixEntries(answers), usageCountValueOrder);
+  }
+
   function getTrainingEngagementAverage(answers) {
     if (!Array.isArray(answers.trainingTopics) || !answers.trainingTopics.length) {
       return 0;
@@ -1909,12 +2113,14 @@
     const toolIndex = computeToolIndex(answers);
     const skillIndex = computeSkillIndex(answers);
     const investmentIndex = computeInvestmentIndex(answers);
+    const usageDepthIndex = computeUsageDepthIndex(answers);
 
     const composite =
-      toolIndex * 0.25 +
-      skillIndex * 0.25 +
+      toolIndex * 0.2 +
+      skillIndex * 0.2 +
       investmentIndex * 0.15 +
-      judgment.index * 0.35;
+      judgment.index * 0.3 +
+      usageDepthIndex * 0.15;
 
     const fluencyScore = clamp(Math.round(composite), 1, 100);
     const level = scoreToLevel(fluencyScore);
@@ -1926,6 +2132,7 @@
       skillIndex: skillIndex,
       investmentIndex: investmentIndex,
       judgmentIndex: judgment.index,
+      usageDepthIndex: usageDepthIndex,
       toolBreadth: judgment.toolBreadth,
       promptQuality: judgment.promptQuality,
       verificationJudgment: judgment.verificationJudgment,
@@ -1971,6 +2178,11 @@
       answers.trainingTopics.every(function (value) {
         return isFilled(value);
       });
+    const usageMatrixComplete = usageMatrixSections.every(function (section) {
+      return section.items.every(function (item) {
+        return isFilled(answers[item.name]);
+      });
+    });
 
     return [
       profileComplete,
@@ -1980,6 +2192,7 @@
       trainingComplete,
       toolUsageComplete,
       toolsComplete,
+      usageMatrixComplete,
     ].concat(assessmentComplete, [hoursComplete]);
   }
 
@@ -2090,6 +2303,24 @@
     }
 
     if (pageIndex === 7) {
+      usageMatrixSections.forEach(function (section) {
+        const sectionMissing = section.items.some(function (item) {
+          return !isFilled(answers[item.name]);
+        });
+
+        if (sectionMissing) {
+          missing.push(section.key);
+          const firstMissingItem = section.items.find(function (item) {
+            return !isFilled(answers[item.name]);
+          });
+          if (firstMissingItem) {
+            focusSelectors.push('[name="' + firstMissingItem.name + '"]');
+          }
+        }
+      });
+    }
+
+    if (pageIndex === 8) {
       weeklyTimeFields.forEach(function (field) {
         if (!isFilled(answers[field.name])) {
           missing.push("hours");
@@ -2653,6 +2884,49 @@
       if (index === 7) {
         entry.sections = [
           {
+            section: "00",
+            key: "usage-start",
+            title: "Start month",
+            note: "The month you started using AI tools.",
+            items: [
+              {
+                index: "01",
+                name: "aiStartMonth",
+                question: "Start using AI/chatgpt from",
+                answer: answersSnapshot.aiStartMonth,
+                suggested_answer: answersSnapshot.aiStartMonth,
+                dropdownlist: buildStartMonthOptions(),
+              },
+            ],
+          },
+        ].concat(
+          usageMatrixSections.map(function (section, sectionIndex) {
+            return {
+              section: String(sectionIndex + 1).padStart(2, "0"),
+              key: section.key,
+              title: section.title,
+              note: section.note,
+              items: section.items.map(function (item, itemIndex) {
+                const answerValue = answersSnapshot[item.name] || "0";
+                return {
+                  index: String(itemIndex + 1).padStart(2, "0"),
+                  name: item.name,
+                  question: item.label,
+                  answer: answerValue,
+                  suggested_answer: answerValue,
+                  dropdownlist: usageCountDropdownOptions.map(function (option) {
+                    return { value: option.value, label: option.label };
+                  }),
+                };
+              }),
+            };
+          })
+        );
+      }
+
+      if (index === 8) {
+        entry.sections = [
+          {
             section: "01",
             key: "monthly-time-cost",
             title: "Monthly time and cost",
@@ -2836,6 +3110,24 @@
     const entries = [];
 
     toolUsageSections.forEach(function (section) {
+      section.items.forEach(function (item) {
+        const value = answers[item.name];
+        entries.push({
+          key: item.name,
+          label: item.label,
+          value: value || "",
+          sectionKey: section.key,
+        });
+      });
+    });
+
+    return entries;
+  }
+
+  function getUsageMatrixEntries(answers) {
+    const entries = [];
+
+    usageMatrixSections.forEach(function (section) {
       section.items.forEach(function (item) {
         const value = answers[item.name];
         entries.push({
@@ -3132,6 +3424,26 @@
         answers.roleBackground,
         "e.g. product manager, student, analyst"
       ) +
+      renderTextField(
+        "jobTitle",
+        "Job title",
+        answers.jobTitle,
+        "e.g. Marketing Manager"
+      ) +
+      '<div class="field-grid">' +
+      renderSelectField(
+        "positionRanked",
+        "Position ranked",
+        answers.positionRanked,
+        positionRankedOptions
+      ) +
+      renderSelectField(
+        "industry",
+        "Industry",
+        answers.industry,
+        industryOptions
+      ) +
+      "</div>" +
       '<p class="form-note">This contact and background information is used to personalize the result and prepare the email copy action.</p>';
 
     const objectiveCard =
@@ -3270,6 +3582,60 @@
         "Each tool select one option.",
         '<p class="section-note">Use the same scale for every tool so the roadmap can read your current tool depth consistently.</p>' +
           legend
+      ) +
+      sections +
+      "</div>"
+    );
+  }
+
+  function renderUsageVolumePage(answers) {
+    const startMonthField = renderSelectField(
+      "aiStartMonth",
+      "Start using AI/chatgpt from",
+      answers.aiStartMonth || "",
+      buildStartMonthOptions()
+    );
+
+    const startCard = renderQuestionCard(
+      "usage-start",
+      "07",
+      "When did you start?",
+      "Pick the month you started using AI tools such as ChatGPT.",
+      '<div class="field-grid">' + startMonthField + "</div>"
+    );
+
+    const sections = usageMatrixSections
+      .map(function (section, index) {
+        const fields = section.items
+          .map(function (item) {
+            return renderSelectField(
+              item.name,
+              item.label,
+              answers[item.name] || "0",
+              usageCountDropdownOptions
+            );
+          })
+          .join("");
+
+        return renderQuestionCard(
+          section.key,
+          "07" + String.fromCharCode(65 + index),
+          section.title,
+          section.note,
+          '<div class="field-grid">' + fields + "</div>"
+        );
+      })
+      .join("");
+
+    return (
+      '<div class="page-stack">' +
+      startCard +
+      renderQuestionCard(
+        "usage-matrix-intro",
+        "07",
+        "Tool & skill usage volume",
+        "For each item, choose the range that best matches how many times you have used, created, or collected it.",
+        '<p class="section-note">0 means never. Use the same scale for every item so the roadmap can read your usage depth consistently.</p>'
       ) +
       sections +
       "</div>"
@@ -3580,10 +3946,11 @@
       ", grounded in your available time, budget, and current skills.";
 
     const compositeIndices = [
-      { label: "Tool breadth & depth", value: roadmap.levelSignal.toolIndex, weight: 25 },
-      { label: "Skill depth", value: roadmap.levelSignal.skillIndex, weight: 25 },
+      { label: "Tool breadth & depth", value: roadmap.levelSignal.toolIndex, weight: 20 },
+      { label: "Skill depth", value: roadmap.levelSignal.skillIndex, weight: 20 },
       { label: "Learning investment", value: roadmap.levelSignal.investmentIndex, weight: 15 },
-      { label: "Self-assessed judgment", value: roadmap.levelSignal.judgmentIndex, weight: 35 },
+      { label: "Self-assessed judgment", value: roadmap.levelSignal.judgmentIndex, weight: 30 },
+      { label: "Usage volume", value: roadmap.levelSignal.usageDepthIndex, weight: 15 },
     ];
     const compositeRows = compositeIndices
       .map(function (item) {
@@ -3978,6 +4345,8 @@
     } else if (pageIndex === 6) {
       pageContent.innerHTML = renderAssessmentPage(answers);
     } else if (pageIndex === 7) {
+      pageContent.innerHTML = renderUsageVolumePage(answers);
+    } else if (pageIndex === 8) {
       pageContent.innerHTML = renderHoursPage(answers);
     } else {
       pageContent.innerHTML = renderResultPage(answers, state.finalResult || roadmap);
@@ -4095,6 +4464,9 @@
       state.answers.name = cleanText(getFieldValue("name"), 80);
       state.answers.email = cleanText(getFieldValue("email"), 120);
       state.answers.roleBackground = cleanText(getFieldValue("roleBackground"), 120);
+      state.answers.jobTitle = cleanText(getFieldValue("jobTitle"), 80);
+      state.answers.positionRanked = getFieldValue("positionRanked") || "None";
+      state.answers.industry = getFieldValue("industry") || "None";
       state.answers.wants = [
         getFieldValue("wantsPrimary") || "None",
         getFieldValue("wantsSecondary") || "None",
@@ -4135,6 +4507,13 @@
       state.answers.automationBuilding = getFieldValue("automationBuilding") || "1";
       state.answers.timeCostCommitment = getFieldValue("timeCostCommitment") || "1";
     } else if (state.currentPage === 7) {
+      state.answers.aiStartMonth = getFieldValue("aiStartMonth") || "";
+      usageMatrixSections.forEach(function (section) {
+        section.items.forEach(function (item) {
+          state.answers[item.name] = cleanText(getFieldValue(item.name), 20);
+        });
+      });
+    } else if (state.currentPage === 8) {
       weeklyTimeFields.forEach(function (field) {
         state.answers[field.name] = getCommitmentSelectValue(
           field,
@@ -4229,6 +4608,8 @@
           : state.currentPage === 6
           ? "Rate the five factors that shape your AI fluency score."
           : state.currentPage === 7
+          ? "Select a usage range for every item on this page."
+          : state.currentPage === 8
           ? "Enter the monthly hours and cost numbers before continuing."
           : "Complete the highlighted fields before continuing.";
       focusFirstSelector(validation.focusSelectors);
@@ -4238,7 +4619,7 @@
 
     clearErrorState();
 
-    if (state.currentPage === 7) {
+    if (state.currentPage === 8) {
       await saveDraftCheckpoint();
       state.finalResult = computeRoadmap(state.answers);
       state.submissionId = isUuid(state.submissionId)

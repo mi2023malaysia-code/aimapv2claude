@@ -1,0 +1,148 @@
+[[[Add 1 page before <cost and hour> page:]]]
+
+=====
+
+A1. Start using AI/chatgpt from:
+dropdown:calendar
+
+the following is downloadlist
+default: 0
+Dropdownlist:(
+0
+1 - 30
+31- 100
+101 - 500
+More then 500
+)
+
+for all belows:
+
+[(
+B1. Basic prompt   (Use)
+Use in chatgpt, gemini  (in totaUsel)
+B2. Basic prompt (collect)
+Use in chatgpt, gemini  (in totaUsel)
+
+C1.Prompt Structure - Prompt Engineering (use)
+C2.Prompt Structure - Prompt Engineering (collect)
+  
+D1. Hyperprompt (use)
+D2. Hyperprompt (collect)
+
+E1. Custom gpt (used)
+E2. Custom gpt (created/modified)
+E3. Custom gpt (collected)
+
+F1. Skills created (used)
+F2. Skills created (created/modified)
+F3. Skills created (collected)
+
+G1. Agents (used)
+G2. Agents (created/modified)
+G3. Agents (collect)
+
+H1. Workflow (used)
+
+H2. Workflow (created/modified)
+H3. Workflow (collected)
+
+J1. Try Error Checking
+J2. Detected Error
+
+
+)]
+
+=====
+
+[[[at page <02A
+Contact details.:]]]
+
+add:
+
+job title
+[textbox]
+
+position ranked
+default: None
+downdown list
+(
+None
+junior
+senior
+c-level
+boss
+freelancer
+student
+retire
+other
+)
+job title
+
+
+industry 
+default: None
+
+dropdown list:
+(
+None
+Manufacturing
+
+Automotive
+
+Electronics & Semiconductor
+
+Information Technology (IT)
+
+Artificial Intelligence (AI)
+
+Telecommunications
+
+Healthcare & Medical
+
+Pharmaceuticals
+
+Biotechnology
+
+Financial Services
+
+Real Estate & Construction
+
+Energy & Utilities
+
+Renewable Energy
+
+Agriculture & Agritech
+
+Food & Beverage
+
+Retail & E-commerce
+
+Logistics & Supply Chain
+
+Transportation
+
+Education & EdTech
+
+Hospitality & Tourism
+
+Media & Entertainment
+
+Marketing & Advertising
+
+Human Resources (HR)
+
+Legal Services
+
+Government & Public Sector
+
+Aerospace & Defense
+
+Environmental Services
+
+Consumer Goods
+
+Fashion & Apparel
+
+Beauty & Cosmetics
+
+)
