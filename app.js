@@ -1396,7 +1396,7 @@
       return;
     }
 
-    state.currentPage = clamp(Number(record.currentPage) || 1, 1, 7);
+    state.currentPage = clamp(Number(record.currentPage) || 1, 1, 8);
     state.answers = mergeSavedAnswers(record.answers);
     state.resumeToken = record.resumeToken;
     state.submissionId = isUuid(record.submissionId) ? record.submissionId : "";
