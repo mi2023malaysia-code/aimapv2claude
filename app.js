@@ -2569,19 +2569,14 @@
   function buildSupabasePayload(answers, roadmap) {
     const submittedAt =
       typeof Date !== "undefined" ? new Date().toISOString() : "";
-    const submissionSnapshot = {
-      answers: answers,
-      roadmap: roadmap,
-      submitted_at: submittedAt,
-      app_version: SUPABASE_APP_VERSION,
-    };
 
     return {
       name: cleanText(answers.name, 80),
       email: cleanText(answers.email, 120),
       phone: null,
       consent_given: true,
-      answers: submissionSnapshot,
+      answers: answers,
+      roadmap: roadmap,
       fluency_score: roadmap.levelSignal.fluencyScore,
       fluency_level: roadmap.levelSignal.level,
       band_key: roadmap.bandKey || "beginner",
